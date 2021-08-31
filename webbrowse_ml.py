@@ -12,7 +12,7 @@ The neurofeedback protocols described here are inspired by
 
 Adapted from https://github.com/NeuroTechX/bci-workshop
 # """
-# from utils import compute_PSD
+
 import pyautogui
 from time import sleep
 from os import system as sys
@@ -23,7 +23,7 @@ import playsound
 import sys
 sys.path.append(r"c:\Users\anush\OneDrive\Documents\GitHub\museEEG\anmus_code")
 from analysis import *
-import utils_new # Our own utility functions
+import utils # Our own utility functions
 
 class Band:
     Delta = 0
@@ -119,24 +119,23 @@ if __name__ == "__main__":
                 ch_data = np.array(eeg_data)[:, INDEX_CHANNELS[index]]
 
                 # Update EEG buffer with the new data
-                buffers[0][index] = utils_new.update_buffer(
+                buffers[0][index] = utils.update_buffer(
                     buffers[0][index], ch_data)
 
                 # print(buffers[0][index].shape)
 
                 """ 3.2 COMPUTE BAND POWERS """
                 # Get newest samples from the buffer
-                data_epoch = utils_new.get_last_data(buffers[0][int(index)],
+                data_epoch = utils.get_last_data(buffers[0][int(index)],
                                         EPOCH_LENGTH * fs)
 
                 # print(len(data_epoch))
 
                 # Compute band powers
                 band_powers = vectorize(data_epoch.reshape(-1), fs, filtering=True, streaming=True)
-                # band_powers = compute_PSD(data_epoch, fs)
                 # print(band_powers)
 
-                buffers[1][index] = utils_new.update_buffer(buffers[1][index], np.asarray([band_powers]))
+                buffers[1][index] = utils.update_buffer(buffers[1][index], np.asarray([band_powers]))
 
             data_ = np.concatenate((buffers[1][2][-1], buffers[1][3][-1])).reshape(1, -1)
             focus_label = svm.predict(data_)
@@ -186,22 +185,12 @@ if __name__ == "__main__":
             if i > 3:
                 if Up == False:
                     if focus_label == 1:   
-                        print('he do be concentratin')
+                        print('he do be concentratin - down')
                         pyautogui.scroll(-200)
                 else:
                     if focus_label == 1:   
-                        print('he do be concentratin')
+                        print('he do be concentratin - up')
                         pyautogui.scroll(200)
 
     except KeyboardInterrupt:
         print('Closing!')
-
-#todo
-# - map eyeblinks to webpage changes
-# - map concentration to scrolling
-# - ML for concentration??
-# - add signal processing ?? -> already there
-# - switch to scipy psd ?? -> nah fom
-# - Use bandpower averages for concentration?
-# - Do sum ICA shi for eyeblink detection  -> Dont make no sense
-#create repo wit dis code

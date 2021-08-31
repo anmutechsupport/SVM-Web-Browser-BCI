@@ -14,13 +14,6 @@ def vectorize(df, fs, filtering=False, streaming=False):
         index = len(df)
         feature_vectors = []
         if filtering == True:
-            
-            # NOTCH_B, NOTCH_A = butter(4, np.array([55, 65])/(fs/2), btype='bandstop')
-
-            # filter_state = np.tile(lfilter_zi(NOTCH_B, NOTCH_A),
-            #                         (1, 1)).T #using one channel buffers, the first indice in the second tupple would be 1, think vertical single column buffer
-            # df[:, x], filter_state = lfilter(NOTCH_B, NOTCH_A, df[:, x], axis=0,
-            #                                     zi=filter_state)
 
             DataFilter.perform_bandpass(df[:], fs, 15.0, 6.0, 4,
                                 FilterTypes.BESSEL.value, 0)
@@ -29,11 +22,6 @@ def vectorize(df, fs, filtering=False, streaming=False):
         for y in range(0,index,fs):
 
             f, Pxx_den = signal.welch(df[y:y+fs], fs=fs, nfft=256) #simulated 4 point overlap
-            # plt.semilogy(f, Pxx_den)
-            # plt.ylim([0.5e-3, 1])
-            # plt.xlabel('frequency [Hz]')
-            # plt.ylabel('PSD [V**2/Hz]')
-            # plt.show()
 
             ind_delta, = np.where(f < 4)
             meanDelta = np.mean(Pxx_den[ind_delta], axis=0)
@@ -64,13 +52,6 @@ def vectorize(df, fs, filtering=False, streaming=False):
         for x in tqdm(range(ch)):
 
             if filtering == True:
-                
-                # NOTCH_B, NOTCH_A = butter(4, np.array([55, 65])/(fs/2), btype='bandstop')
-
-                # filter_state = np.tile(lfilter_zi(NOTCH_B, NOTCH_A),
-                #                         (1, 1)).T #using one channel buffers, the first indice in the second tupple would be 1, think vertical single column buffer
-                # df[:, x], filter_state = lfilter(NOTCH_B, NOTCH_A, df[:, x], axis=0,
-                #                                     zi=filter_state)
 
                 DataFilter.perform_bandpass(df[:, x], fs, 15.0, 6.0, 4,
                                     FilterTypes.BESSEL.value, 0)
@@ -108,8 +89,8 @@ def vectorize(df, fs, filtering=False, streaming=False):
         return powers
 
 def svm_model():
-    concentrate = pd.read_csv(r'concentrating.csv', usecols=[1,4])
-    normal = pd.read_csv(r'normal.csv', usecols=[1,4])
+    concentrate = pd.read_csv(r'datasets\concentrating.csv', usecols=[1,4])
+    normal = pd.read_csv(r'datasets\normal.csv', usecols=[1,4])
 
     # nfft = nextpow2(256)
     concentrate = concentrate.to_numpy()
@@ -155,79 +136,11 @@ def svm_model():
     print(confusion_matrix(y_test, y_pred))
     print(classification_report(y_test, y_pred))
 
+    from sklearn.model_selection import cross_val_score
+    scores = cross_val_score(svclassifier, full_input[:, :10], full_input[:, 10], cv=5)
+    print("Mean Score from 5-fold cross-val: "+str(np.mean(scores)))
+
     return svclassifier
-
-concentrate = pd.read_csv(r'concentrating.csv', usecols=[1,4])
-normal = pd.read_csv(r'normal.csv', usecols=[1,4])
-
-# nfft = nextpow2(256)
-concentrate = concentrate.to_numpy()
-normal = normal.to_numpy()
-
-data = [concentrate, normal]
-# print(df.shape)
-
-# plt.scatter(normal[:, 1],concentrate[:, 1], alpha=0.3,
-#             cmap='viridis')
-# plt.show()
-
-features = []
-for x in data:
-    features.append(vectorize(x, 256, filtering=True))
-
-concentrate_features = features[0]
-print(concentrate_features)
-normal_features = features[1]
-
-n_labels = np.full((normal_features.shape[0]), 0)
-c_labels = np.full((concentrate_features.shape[0]), 1)
-
-n_input = np.column_stack((normal_features, n_labels))
-c_input = np.column_stack((concentrate_features, c_labels))
-
-full_input = np.concatenate((c_input, n_input))
-
-# shuffle data
-shuffle_idx = np.random.permutation(len(full_input))
-full_input = full_input[shuffle_idx]
-
-print(normal_features)
-
-from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(full_input[:, :10], full_input[:, 10], test_size = 0.20)
-
-from sklearn.svm import SVC
-svclassifier = SVC(kernel='rbf')
-svclassifier.fit(X_train, y_train)
-
-y_pred = svclassifier.predict(X_test)
-# print(y_pred)
-# print(y_test)
-
-from sklearn.metrics import classification_report, confusion_matrix
-print(confusion_matrix(y_test, y_pred))
-print(classification_report(y_test, y_pred))
-
-
-    # kmeans = KMeans(n_clusters=2, random_state=0)
-    # kmeans.fit(powers)
-    # return kmeans
-
-    # clusters = kmeans.fit(powers)
-    # centers = kmeans.cluster_centers_
-    # covMatrix = np.cov(centers.T)
-    # corMatrix = np.corrcoef(centers.T)
-    # # sn.heatmap(covMatrix, annot=True, fmt='g')
-    # # plt.show()
-    # sn.heatmap(corMatrix, annot=True, fmt='g')
-    # plt.show()
-
-    # plt.scatter(powers[:, 2], powers[:, 3], c=clusters, s=50,
-    #             cmap='viridis')
-
-    # # print(kmeans.cluster_centers_[:, :])
-    # plt.scatter(centers[:, 2], centers[:, 3], c='black', s=200, alpha=0.5)
-    # plt.show()
 
 '''
 The generation of control signals based on
